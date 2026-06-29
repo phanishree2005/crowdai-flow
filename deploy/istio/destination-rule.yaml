@@ -1,0 +1,23 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: predictive-dr
+  namespace: crowdflow-system
+spec:
+  host: predictive-service.crowdflow-system.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 100
+        maxRequestsPerConnection: 10
+      tcp:
+        maxConnections: 100
+    # Circuit Breaker Configuration
+    outlierDetection:
+      consecutive5xxErrors: 3
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+    tls:
+      # Enforce strict mutual TLS inside the mesh
+      mode: ISTIO_MUTUAL

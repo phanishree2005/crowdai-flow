@@ -1,0 +1,52 @@
+# Editor & OS
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.swp
+
+# Go
+bin/
+obj/
+*.out
+vendor/
+
+# Rust
+target/
+**/*.rs.bk
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.npm
+
+# Protobuf
+gen/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.tfstate.lock.info
+
+# Local Env
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+*.lcov

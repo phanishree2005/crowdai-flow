@@ -1,0 +1,7 @@
+rules:
+  - id: no-fmt-print-in-prod
+    patterns:
+      - pattern: fmt.Println(...)
+    message: "Do not use fmt.Println in production code. Use structured logging."
+    languages: [go]
+    severity: WARNING

@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package crowdflow.routing.v1;
+
+option go_package = "github.com/crowdflow/enterprise/api/gen/go/crowdflow/routing/v1;routingv1";
+
+// RoutingService provides endpoints for dynamic pathfinding and spatial graph analysis.
+service RoutingService {
+  // Calculates an optimized route from origin to destination using dynamic A*
+  rpc GetRoute(GetRouteRequest) returns (GetRouteResponse);
+}
+
+message Coordinate {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message GetRouteRequest {
+  string device_id = 1;
+  Coordinate origin = 2;
+  Coordinate destination = 3;
+  // Optional route optimization profile (e.g., shortest_distance, fastest_time)
+  string profile = 4; 
+}
+
+message Waypoint {
+  Coordinate coordinate = 1;
+  // Estimated time of arrival to this waypoint in seconds from origin
+  int32 eta_seconds = 2;
+  // Instruction for this segment
+  string instruction = 3;
+}
+
+message GetRouteResponse {
+  repeated Waypoint waypoints = 1;
+  int32 total_distance_meters = 2;
+  int32 total_eta_seconds = 3;
+}

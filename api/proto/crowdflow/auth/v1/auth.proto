@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package crowdflow.auth.v1;
+
+option go_package = "github.com/crowdflow/enterprise/api/gen/go/crowdflow/auth/v1;authv1";
+
+import "google/protobuf/timestamp.proto";
+
+// AuthService provides endpoints for identity management, token issuance, and RBAC operations.
+service AuthService {
+  // Exchange client credentials or an authorization code for an access token.
+  rpc IssueToken(IssueTokenRequest) returns (IssueTokenResponse);
+  
+  // Validate a JWT and return the embedded claims.
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+message IssueTokenRequest {
+  string grant_type = 1;
+  string client_id = 2;
+  string client_secret = 3;
+  // Scopes requested by the client
+  repeated string scopes = 4;
+}
+
+message IssueTokenResponse {
+  string access_token = 1;
+  string token_type = 2;
+  int32 expires_in = 3;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string subject = 2;
+  repeated string roles = 3;
+  repeated string scopes = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}

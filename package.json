@@ -1,0 +1,15 @@
+{
+  "name": "crowdflow-enterprise",
+  "version": "1.0.0",
+  "description": "CrowdFlow AI Enterprise Root Scripting and Commitlinting",
+  "private": true,
+  "scripts": {
+    "commitlint": "commitlint --edit",
+    "sbom": "cyclonedx-npm --output-format json --output-file sbom.json"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.4.3",
+    "@commitlint/config-conventional": "^18.4.3",
+    "@cyclonedx/cyclonedx-npm": "^1.16.0"
+  }
+}

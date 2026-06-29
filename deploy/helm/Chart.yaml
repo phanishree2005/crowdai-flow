@@ -1,0 +1,14 @@
+apiVersion: v2
+name: crowdflow-enterprise
+description: A Helm chart for CrowdFlow AI Enterprise Platform
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+  - name: kafka
+    version: 26.6.2
+    repository: https://charts.bitnami.com/bitnami
+  - name: redis
+    version: 18.6.1
+    repository: https://charts.bitnami.com/bitnami

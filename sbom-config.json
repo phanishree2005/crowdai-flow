@@ -1,0 +1,8 @@
+{
+  "projectType": "application",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "components": true,
+  "dependencies": true,
+  "vulnerabilities": false
+}

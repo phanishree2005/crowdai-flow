@@ -1,0 +1,21 @@
+* text=auto eol=lf
+
+*.go text eol=lf
+*.rs text eol=lf
+*.py text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf
+Makefile text eol=lf
+*.sh text eol=lf executable
+
+# Linguist configurations
+docs/* linguist-documentation
+tests/* linguist-test
+
+# Protobuf
+*.proto text eol=lf linguist-language=Protocol-Buffer

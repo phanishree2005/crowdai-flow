@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package crowdflow.telemetry.v1;
+
+option go_package = "github.com/crowdflow/enterprise/api/gen/go/crowdflow/telemetry/v1;telemetryv1";
+
+import "google/protobuf/timestamp.proto";
+
+// TelemetryService provides ingestion endpoints for high-throughput device telemetry.
+service TelemetryService {
+  // Ingest stream device metrics in real-time.
+  rpc Ingest(stream TelemetryEvent) returns (IngestResponse);
+}
+
+// TelemetryEvent represents a single telemetry reading from an edge device.
+message TelemetryEvent {
+  string device_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  
+  // Location telemetry
+  double latitude = 3;
+  double longitude = 4;
+  float heading = 5;
+  float speed = 6;
+  
+  // Operational telemetry
+  float battery_level = 7;
+  float temperature = 8;
+  
+  // Custom payload for specific sensors
+  bytes payload = 9;
+}
+
+message IngestResponse {
+  bool success = 1;
+  int32 events_processed = 2;
+  string error_message = 3;
+}

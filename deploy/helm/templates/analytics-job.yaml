@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-analytics
+  namespace: crowdflow-system
+spec:
+  # Do not restart automatically if it fails, Flink manages its own HA
+  backoffLimit: 0 
+  template:
+    metadata:
+      labels:
+        app: crowdflow-analytics
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: flink-jobmanager
+        image: "{{ .Values.analytics.image.repository }}:{{ .Values.analytics.image.tag }}"
+        command: ["/opt/flink/bin/standalone-job.sh"]
+        args: ["start-foreground", "--job-classname", "com.crowdflow.analytics.Job"]
+        env:
+        - name: KAFKA_BROKERS
+          value: "crowdflow-kafka:9092"
+        ports:
+        - containerPort: 8081
+          name: flink-ui
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2"

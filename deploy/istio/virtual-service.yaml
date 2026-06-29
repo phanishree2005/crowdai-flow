@@ -1,0 +1,39 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: crowdflow-routing
+  namespace: crowdflow-system
+spec:
+  hosts:
+  - "api.crowdflow.internal"
+  gateways:
+  - crowdflow-gateway
+  http:
+  # Auth Service
+  - match:
+    - uri:
+        prefix: /api/v1/auth
+    route:
+    - destination:
+        host: auth-service.crowdflow-system.svc.cluster.local
+        port:
+          number: 8080
+  
+  # WebSockets/Telemetry Stream
+  - match:
+    - uri:
+        prefix: /stream
+    route:
+    - destination:
+        host: telemetry-service.crowdflow-system.svc.cluster.local
+        port:
+          number: 9001
+    # WebSocket support in Istio
+    websocketUpgrade: true
+
+  # Web Dashboard fallback
+  - route:
+    - destination:
+        host: web-dashboard.crowdflow-system.svc.cluster.local
+        port:
+          number: 80

@@ -1,0 +1,24 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: crowdflow-gateway
+  namespace: crowdflow-system
+spec:
+  selector:
+    istio: ingressgateway # Use Istio default controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "api.crowdflow.internal"
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: crowdflow-cert # Secret containing TLS certs
+    hosts:
+    - "api.crowdflow.internal"

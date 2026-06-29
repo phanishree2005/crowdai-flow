@@ -1,0 +1,69 @@
+name: Release & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: my-registry.dkr.ecr.us-east-1.amazonaws.com
+
+jobs:
+  build-and-push:
+    name: Build, Sign, and Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for AWS OIDC and Cosign keyless
+      contents: read
+    strategy:
+      matrix:
+        service: [auth, telemetry, routing, cv, predictive, analytics, web-dashboard, ops-dashboard]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.3.0
+
+      - name: Build and push Docker image
+        env:
+          IMAGE_TAG: ${{ github.ref_name }}
+          REPO: ${{ env.ECR_REGISTRY }}/crowdflow-${{ matrix.service }}
+        run: |
+          docker build -t $REPO:$IMAGE_TAG -f src/${{ matrix.service }}/Dockerfile src/${{ matrix.service }}
+          docker push $REPO:$IMAGE_TAG
+          
+          # Cryptographic Signing with Cosign
+          # We use keyless signing tied to the GitHub Actions identity
+          cosign sign --yes $REPO:$IMAGE_TAG
+
+  deploy:
+    name: Deploy to EKS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update KubeConfig
+        run: aws eks update-kubeconfig --name crowdflow-production --region ${{ env.AWS_REGION }}
+
+      - name: Deploy via Helm
+        run: |
+          IMAGE_TAG=${{ github.ref_name }}
+          ./scripts/deploy.sh $IMAGE_TAG

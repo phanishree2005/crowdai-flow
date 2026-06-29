@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package crowdflow.cv.v1;
+
+option go_package = "github.com/crowdflow/enterprise/api/gen/go/crowdflow/cv/v1;cvv1";
+
+// CVService handles high-throughput video streams and returns object detection inferences.
+service CVService {
+  // Bidirectional stream: edge devices send frames/WebRTC SDPs, service streams back detections.
+  rpc StreamAnalysis(stream StreamAnalysisRequest) returns (stream StreamAnalysisResponse);
+}
+
+message StreamAnalysisRequest {
+  string device_id = 1;
+  // Can be a raw JPEG frame or a WebRTC SDP offer
+  oneof payload {
+    bytes frame = 2;
+    string webrtc_sdp = 3;
+  }
+}
+
+message BoundingBox {
+  float x_min = 1;
+  float y_min = 2;
+  float x_max = 3;
+  float y_max = 4;
+}
+
+message Detection {
+  string label = 1;
+  float confidence = 2;
+  BoundingBox box = 3;
+}
+
+message StreamAnalysisResponse {
+  // If WebRTC was requested, send back the SDP answer
+  string webrtc_sdp_answer = 1;
+  // If a frame was processed, send back the detections
+  repeated Detection detections = 2;
+}

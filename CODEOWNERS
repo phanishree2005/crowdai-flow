@@ -1,0 +1,4 @@
+* @crowdflow/principal-engineers
+/api/ @crowdflow/architects
+/deploy/ @crowdflow/sre
+/security/ @crowdflow/security

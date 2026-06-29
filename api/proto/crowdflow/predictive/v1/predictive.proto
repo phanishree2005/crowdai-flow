@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package crowdflow.predictive.v1;
+
+option go_package = "github.com/crowdflow/enterprise/api/gen/go/crowdflow/predictive/v1;predictivev1";
+
+// PredictiveService provides endpoints for spatio-temporal congestion forecasting.
+service PredictiveService {
+  rpc ForecastCongestion(ForecastRequest) returns (ForecastResponse);
+}
+
+message ForecastRequest {
+  // Bounding box or set of geohashes to forecast
+  repeated string geohashes = 1;
+  // Horizon in minutes (e.g., 15, 30, 60)
+  int32 forecast_horizon_minutes = 2;
+  // Recent historical context (optional if the service fetches directly from Flink/Redis)
+  repeated HistoricalData context = 3;
+}
+
+message HistoricalData {
+  string geohash = 1;
+  float average_speed = 2;
+  int32 density = 3;
+}
+
+message ForecastResponse {
+  repeated CongestionForecast forecasts = 1;
+}
+
+message CongestionForecast {
+  string geohash = 1;
+  // Predicted speed
+  float predicted_speed = 2;
+  // Predicted density (number of devices)
+  int32 predicted_density = 3;
+  // Confidence interval [0.0 - 1.0]
+  float confidence = 4;
+}
