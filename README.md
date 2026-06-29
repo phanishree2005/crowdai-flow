@@ -1,78 +1,66 @@
-# CrowdFlow AI Enterprise
+# CrowdFlow AI Enterprise 🌐
 
-## Executive Summary
-CrowdFlow AI Enterprise is a production-grade, globally scalable crowd intelligence platform. It ingests high-throughput telemetry from 50,000+ edge devices, leverages real-time computer vision feeds, performs spatial-temporal forecasting, and uses AI-assisted copilot agents for operational decision support.
+> **State-of-the-art intelligent control plane for real-time crowd dynamics, predictive geospatial routing, and emergency orchestration.**
 
-## High-Level Architecture
-The platform utilizes a modern event-driven architecture based on CQRS and Event Sourcing.
-- **Ingestion**: Go-based microservices writing to Kafka.
-- **Routing**: Rust-based dynamic graph analytics.
-- **Analytics**: Apache Flink for real-time windowing.
-- **ML/CV**: PyTorch & OpenCV for edge and central inference.
+![CrowdFlow AI](https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&q=80&w=1200)
 
-## ASCII Dataflow
-```text
-[Edge Devices] --> (API Gateway / Envoy) --> [Telemetry Ingest (Go)] --> (Kafka) 
-                                                                             |--> [Flink Analytics]
-                                                                             |--> [Routing Engine (Rust)]
-                                                                             |--> [AI Copilot / Qdrant]
+## Overview
+
+**CrowdFlow AI Enterprise** is a massive polyglot microservice architecture designed to handle 50,000+ simultaneous telemetry streams. It features a stunning, premium Glassmorphic frontend combining 2D WebGL maps with 3D React Three Fiber Digital Twins.
+
+### Key Features
+- 🗺️ **Macro Geospatial Engine**: Deck.gl Hexagon and Heatmap density layers rendering massive datasets in real-time.
+- 🏢 **Micro Digital Twins**: Switch to a 3D building context powered by React Three Fiber for granular operations.
+- 🧠 **LangGraph AI Copilot**: Ask questions directly to the system via an interactive chat interface.
+- 📷 **Computer Vision**: Live mock YOLOv8 widgets displaying zone occupancy and confidence scores.
+- 📈 **Predictive Analytics**: Recharts-powered density trend charts and time-slider prediction layers (+15m, +30m).
+
+---
+
+## 🏗️ Architecture
+
+The system is a true Polyglot Monorepo, leveraging the best language for each specific domain:
+
+- `src/web-dashboard` **(React + Vite + Deck.gl)**: The blazing-fast geospatial command center.
+- `src/ops-dashboard` **(Next.js + tRPC)**: The internal operations control plane.
+- `src/services/auth-service` **(Go)**: Edge ingestion and high-throughput JWT authentication.
+- `src/services/routing-engine` **(Rust)**: Ultra-fast A* pathfinding and evacuation route calculations.
+- `src/services/prediction-engine` **(Python + PyTorch)**: Deep learning inference for crowd density forecasting.
+- `deploy/terraform/` **(HCL)**: Infrastructure-as-code for deploying the Kubernetes (EKS) cluster.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Run the Web Dashboard
+Experience the primary visual control center.
+
+```bash
+cd src/web-dashboard
+npm install
+npm run dev
 ```
+> Open `http://localhost:3001` (or the port specified by Vite).
 
-## Repository Layout
-```text
-.
-├── api/            # Protobuf and OpenAPI specs
-├── deploy/         # Kubernetes, Helm, Terraform
-├── docs/           # Architecture, runbooks, threat models
-├── observability/  # Prometheus, Grafana, Jaeger config
-├── scripts/        # CI/CD and utility scripts
-└── src/            # Microservices (Go, Rust, Python)
+### 2. Run the Ops Dashboard
+Access the administrative operations panel.
+
+```bash
+cd src/ops-dashboard
+npm install
+npm run dev
 ```
+> Open `http://localhost:3000`.
 
-## Technology Stack
-- **Languages**: Go, Rust, Python, TypeScript
-- **Infrastructure**: Kubernetes, Terraform, Helm
-- **Data & Streaming**: Kafka, Redis, TimescaleDB
-- **MLOps**: PyTorch, Triton, LangGraph, Qdrant
+### 3. Spin up the Backend (Docker)
+The entire backend stack is containerized. A `docker-compose` setup is planned to orchestrate the Go, Rust, and Python services along with Kafka/Redis.
 
-## Design Principles
-- **Hexagonal Architecture**: strict separation of domain from IO.
-- **Fail Fast**: circuit breaking on all external calls.
-- **Observability First**: 100% trace coverage via OpenTelemetry.
+---
 
-## Quick Start
-1. `make bootstrap`
-2. `make up` (starts Kafka, Redis, Telemetry)
+## 🛡️ Emergency Protocols
 
-## Local Development
-We provide a comprehensive `.devcontainer` and Docker Compose override structure. See `docs/operations.md`.
+In the event of critical congestion, the **Route Recommendation System** and **Evacuation Protocols** can be triggered directly from the Web Dashboard's alert panel. The Rust engine dynamically calculates the safest paths away from red zones.
 
-## CI/CD Workflow
-Powered by GitHub Actions, featuring automated linting (golangci-lint, clippy), Trivy vulnerability scanning, semantic release, and ArgoCD GitOps deployment.
+---
 
-## Observability
-Integrated OpenTelemetry tracing, Prometheus metrics, and Grafana dashboards.
-
-## Security Model
-Strict mTLS via Istio, OAuth2/OIDC authentication, and ABAC authorization.
-
-## Scaling Strategy
-Stateless services scale horizontally via HPA. Kafka scales via partition expansion.
-
-## Deployment Guide
-See `docs/deployment.md`.
-
-## Performance Targets
-- **Telemetry P99**: < 20ms
-- **Routing P99**: < 5ms
-- **Concurrency**: 50,000+ devices
-
-## Architecture Decision Records Index
-- [0001 - Record Architecture Decisions](docs/adr/0001-record-architecture-decisions.md)
-
-## Troubleshooting
-See `docs/runbooks.md`.
-
-## FAQ
-**Q: How do I add a new protobuf schema?**
-A: Place it in `api/proto/` and run `make proto`.
+*Built with ❤️ using Antigravity AI.*

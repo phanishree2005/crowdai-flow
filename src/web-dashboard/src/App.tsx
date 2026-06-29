@@ -1,32 +1,334 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import MapLayer from './components/MapLayer';
+import DigitalTwin from './components/DigitalTwin';
+import { Search, User, Bell, Activity, AlertTriangle, Play, ChevronRight, Zap, Camera, Crosshair, Send, Layers, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+const mockChartData = [
+  { time: '10:00', density: 12000 },
+  { time: '10:05', density: 13500 },
+  { time: '10:10', density: 15000 },
+  { time: '10:15', density: 14800 },
+  { time: '10:20', density: 16200 },
+  { time: '10:25', density: 18000 },
+  { time: '10:30', density: 18924 },
+];
 
 const App: React.FC = () => {
+  const [activeDevices, setActiveDevices] = useState(24581);
+  const [currentCrowd, setCurrentCrowd] = useState(18924);
+  const [viewMode, setViewMode] = useState<'map' | 'twin'>('map');
+  const [timePrediction, setTimePrediction] = useState('Live');
+  const [chatInput, setChatInput] = useState('');
+  const [chatHistory, setChatHistory] = useState<{role: string, content: string}[]>([]);
+  const [notifications, setNotifications] = useState<string[]>(['Redis Recovered', 'New Anomaly Detected']);
+
+  // Fake slight variations for the KPIs
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveDevices(prev => prev + Math.floor(Math.random() * 5) - 2);
+      setCurrentCrowd(prev => prev + Math.floor(Math.random() * 10) - 5);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAIChat = () => {
+    if (!chatInput.trim()) return;
+    setChatHistory([...chatHistory, { role: 'user', content: chatInput }]);
+    setTimeout(() => {
+      setChatHistory(prev => [...prev, { role: 'ai', content: 'Analyzing multi-modal streams... Zone Alpha is congested due to an unexpected bottleneck at Gate 3. Deploying security team is advised.' }]);
+    }, 1000);
+    setChatInput('');
+  };
+
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      {/* Absolute positioned overlay for HUD */}
-      <div style={{
-        position: 'absolute',
-        top: 20,
-        left: 20,
-        zIndex: 10,
-        backgroundColor: 'rgba(20, 20, 20, 0.85)',
-        padding: '20px',
-        borderRadius: '8px',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid #333',
-        minWidth: '300px'
-      }}>
-        <h1 style={{ margin: '0 0 10px 0', fontSize: '1.2rem', color: '#4ade80' }}>
-          CrowdFlow AI Core
-        </h1>
-        <p style={{ margin: 0, fontSize: '0.9rem', color: '#a3a3a3' }}>
-          Real-time Geospatial Telemetry
-        </p>
+    <div className="relative w-full h-screen overflow-hidden bg-crowd_bg text-white font-sans">
+      {/* Background Layer */}
+      <div className="absolute inset-0 z-0">
+        {viewMode === 'map' ? <MapLayer /> : <DigitalTwin />}
       </div>
 
-      {/* The WebGL Map Visualization */}
-      <MapLayer />
+      {/* Top Navbar */}
+      <div className="absolute top-0 left-0 right-0 h-16 glass z-10 flex items-center justify-between px-6">
+        <div className="flex items-center gap-3">
+          <Zap className="text-crowd_green w-6 h-6" />
+          <h1 className="text-lg font-bold tracking-wider">CrowdFlow AI Enterprise</h1>
+        </div>
+        <div className="flex items-center gap-6">
+          {/* Floor Selector */}
+          <div className="flex items-center gap-2 bg-black/40 border border-gray-700 px-3 py-1.5 rounded-lg text-sm">
+            <Layers className="w-4 h-4 text-gray-400" />
+            <select className="bg-transparent focus:outline-none text-white appearance-none cursor-pointer">
+              <option>Ground Floor</option>
+              <option>Level 1 (Concourse)</option>
+              <option>Level 2 (VIP)</option>
+            </select>
+          </div>
+
+          {/* View Toggle */}
+          <div className="flex bg-black/50 rounded-lg p-1 border border-gray-800">
+             <button 
+               onClick={() => setViewMode('map')}
+               className={`px-3 py-1 rounded text-xs font-bold transition-colors ${viewMode === 'map' ? 'bg-crowd_green text-black' : 'text-gray-400 hover:text-white'}`}>
+               Macro Map
+             </button>
+             <button 
+               onClick={() => setViewMode('twin')}
+               className={`px-3 py-1 rounded text-xs font-bold transition-colors ${viewMode === 'twin' ? 'bg-crowd_green text-black' : 'text-gray-400 hover:text-white'}`}>
+               Digital Twin
+             </button>
+          </div>
+          
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search Zones..." 
+              className="bg-black/40 border border-gray-700 rounded-full pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:border-crowd_green transition-colors w-64"
+            />
+          </div>
+
+          {/* Role Selector */}
+          <div className="flex items-center gap-2 hover:text-crowd_green transition-colors cursor-pointer bg-black/40 border border-gray-700 px-3 py-1.5 rounded-lg">
+            <Shield className="w-4 h-4" />
+            <select className="bg-transparent focus:outline-none text-sm font-medium appearance-none cursor-pointer">
+              <option>Admin Role</option>
+              <option>Security Role</option>
+              <option>Police Role</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Left Sidebar (KPIs & Charts) */}
+      <motion.div 
+        initial={{ x: -300, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="absolute top-20 left-4 bottom-24 w-80 glass rounded-lg flex flex-col gap-4 p-4 z-10 overflow-y-auto"
+      >
+        <h2 className="text-xs uppercase text-gray-400 font-bold tracking-widest mb-2">Live Statistics</h2>
+        
+        <div className="bg-black/30 p-3 rounded border border-gray-800">
+          <div className="text-gray-400 text-xs mb-1 flex items-center justify-between">
+            <span>Active Devices</span>
+            <Activity className="w-3 h-3 text-crowd_green" />
+          </div>
+          <div className="text-2xl font-mono">{activeDevices.toLocaleString()}</div>
+        </div>
+
+        <div className="bg-black/30 p-3 rounded border border-gray-800">
+          <div className="text-gray-400 text-xs mb-1">Current Crowd</div>
+          <div className="text-2xl font-mono">{currentCrowd.toLocaleString()}</div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <div className="bg-black/30 p-3 rounded border border-gray-800">
+            <div className="text-crowd_green text-xs mb-1">Healthy Zones</div>
+            <div className="text-lg font-mono">112</div>
+          </div>
+          <div className="bg-black/30 p-3 rounded border border-gray-800">
+            <div className="text-crowd_red text-xs mb-1">Critical Zones</div>
+            <div className="text-lg font-mono">6</div>
+          </div>
+        </div>
+
+        {/* Phase 4: Analytics Chart */}
+        <div className="mt-4 pt-4 border-t border-gray-800">
+          <h2 className="text-xs uppercase text-gray-400 font-bold tracking-widest mb-4">Crowd Density Trend</h2>
+          <div className="h-32 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={mockChartData}>
+                <defs>
+                  <linearGradient id="colorDensity" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#4ade80" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#4ade80" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="time" hide />
+                <YAxis hide domain={['dataMin - 1000', 'dataMax + 1000']} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'rgba(20,20,20,0.9)', border: '1px solid #333', borderRadius: '4px' }}
+                  itemStyle={{ color: '#4ade80' }}
+                />
+                <Area type="monotone" dataKey="density" stroke="#4ade80" fillOpacity={1} fill="url(#colorDensity)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="mt-auto bg-crowd_green/10 border border-crowd_green/30 p-3 rounded">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-crowd_green animate-pulse" />
+            <span className="text-xs text-crowd_green font-medium">System Online</span>
+          </div>
+          <div className="text-[10px] text-gray-400 flex justify-between"><span>Events/sec:</span> <span>12,842</span></div>
+          <div className="text-[10px] text-gray-400 flex justify-between mt-1"><span>Kafka Msgs:</span> <span>8,391/s</span></div>
+          <div className="text-[10px] text-gray-400 flex justify-between mt-1"><span>Avg Latency:</span> <span>14ms</span></div>
+        </div>
+      </motion.div>
+
+      {/* Right Sidebar (Alerts, Camera & AI) */}
+      <motion.div 
+        initial={{ x: 300, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.4 }}
+        className="absolute top-20 right-4 w-96 glass rounded-lg flex flex-col gap-4 p-4 z-10 bottom-24 overflow-y-auto"
+      >
+        <div className="flex items-center justify-between border-b border-gray-800 pb-2 shrink-0">
+          <h2 className="text-xs uppercase text-gray-400 font-bold tracking-widest flex items-center gap-2">
+            <Bell className="w-4 h-4" /> Alerts
+          </h2>
+          <span className="bg-crowd_red text-black text-[10px] font-bold px-2 py-0.5 rounded-full">7 Active</span>
+        </div>
+
+        <div className="bg-crowd_red/10 border border-crowd_red/30 p-3 rounded shrink-0">
+          <div className="flex gap-3">
+            <AlertTriangle className="w-5 h-5 text-crowd_red shrink-0" />
+            <div className="flex-1">
+              <div className="text-sm font-bold text-crowd_red mb-1">Crowd Density High</div>
+              <div className="text-xs text-gray-300">Zone Alpha is at 98% capacity.</div>
+              <div className="mt-2 text-[10px] uppercase font-bold text-crowd_red">Severity: Critical</div>
+              <button 
+                onClick={() => alert('Evacuation Protocol Initiated. AI redirecting all active traffic away from Zone Alpha.')}
+                className="mt-3 w-full bg-crowd_red hover:bg-red-600 text-white font-bold text-xs py-2 rounded shadow-[0_0_15px_rgba(248,113,113,0.5)] transition-all">
+                Run Evacuation
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Phase 3: Camera YOLO Widget */}
+        <div className="bg-black/40 border border-gray-800 p-3 rounded shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold text-gray-300 flex items-center gap-2"><Camera className="w-4 h-4" /> Camera 21 (Gate A)</h3>
+            <span className="text-[10px] text-crowd_green flex items-center gap-1"><Crosshair className="w-3 h-3"/> YOLOv8 Live</span>
+          </div>
+          <div className="relative w-full h-24 bg-gray-900 rounded overflow-hidden border border-gray-700 flex items-center justify-center">
+            {/* Mock Camera View */}
+            <div className="absolute inset-0 opacity-30 bg-black"></div>
+            <div className="text-[10px] text-gray-500 font-mono tracking-widest border border-gray-500 px-2 py-1 rounded">LIVE FEED OFFLINE</div>
+            {/* Mock Bounding Boxes (if image was loaded) */}
+            <div className="absolute top-4 left-10 w-12 h-16 border border-crowd_green rounded-sm"></div>
+            <div className="absolute top-2 left-32 w-10 h-14 border border-crowd_green rounded-sm"></div>
+          </div>
+          <div className="flex justify-between mt-2 text-[10px] text-gray-400">
+            <span>Occupancy: 84</span>
+            <span>Avg Confidence: 94%</span>
+          </div>
+        </div>
+
+        {/* Phase 3: AI Copilot */}
+        <div className="mt-auto border-t border-gray-800 pt-4 flex flex-col flex-1 min-h-[200px]">
+          <h2 className="text-xs uppercase text-crowd_green font-bold tracking-widest mb-3 flex items-center gap-2">
+            <Zap className="w-4 h-4" /> Ask CrowdFlow AI
+          </h2>
+          
+          <div className="flex-1 overflow-y-auto space-y-2 mb-3 text-xs">
+            {chatHistory.map((msg, i) => (
+              <div key={i} className={`p-2 rounded max-w-[85%] ${msg.role === 'user' ? 'bg-gray-800 ml-auto' : 'bg-crowd_green/10 text-crowd_green border border-crowd_green/20'}`}>
+                {msg.content}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-3">
+            <button onClick={() => setChatInput('Suggest rerouting from Zone Alpha')} className="text-[10px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition-colors">
+              Suggest rerouting
+            </button>
+            <button onClick={() => setChatInput('Predict 15m congestion')} className="text-[10px] bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded transition-colors">
+              Predict 15m congestion
+            </button>
+          </div>
+
+          <div className="relative mt-auto">
+            <input 
+              type="text" 
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAIChat()}
+              placeholder="Ask anything..." 
+              className="w-full bg-black/50 border border-gray-700 rounded p-2 pr-10 text-xs text-white focus:outline-none focus:border-crowd_green transition-colors"
+            />
+            <button onClick={handleAIChat} className="absolute right-2 top-1.5 text-gray-400 hover:text-crowd_green">
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Bottom Bar (Timeline, Prediction Layer & Health) */}
+      <motion.div 
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.6 }}
+        className="absolute bottom-4 left-4 right-4 h-16 glass rounded-lg z-10 flex items-center justify-between px-6"
+      >
+        <div className="flex items-center gap-6 flex-1">
+          <button className="w-8 h-8 rounded-full bg-crowd_green/20 flex items-center justify-center text-crowd_green hover:bg-crowd_green/30 transition-colors">
+            <Play className="w-4 h-4 ml-0.5" />
+          </button>
+          
+          <div className="flex-1 flex items-center gap-4">
+            <span className="text-xs text-gray-400 font-mono">10:30</span>
+            <div className="h-1 bg-gray-800 rounded-full flex-1 relative">
+              <div className="absolute top-0 left-0 bottom-0 w-3/4 bg-crowd_green rounded-full"></div>
+              <div className="absolute top-1/2 left-3/4 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow border-2 border-crowd_green cursor-pointer"></div>
+            </div>
+            <span className="text-xs text-crowd_green font-bold font-mono uppercase">Live</span>
+          </div>
+
+          {/* Prediction Layer Controls */}
+          <div className="flex bg-black/50 rounded-lg p-1 border border-gray-800 ml-4">
+            {['Live', '+5m', '+15m', '+30m'].map(t => (
+              <button 
+                key={t}
+                onClick={() => setTimePrediction(t)}
+                className={`px-3 py-1 rounded text-[10px] font-bold transition-colors ${timePrediction === t ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6 ml-12 border-l border-gray-800 pl-6 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-crowd_green"></div>
+            <span className="text-[10px] uppercase font-bold text-gray-400">Kafka</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-crowd_green"></div>
+            <span className="text-[10px] uppercase font-bold text-gray-400">Redis</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-crowd_green"></div>
+            <span className="text-[10px] uppercase font-bold text-gray-400">Flink</span>
+          </div>
+          <div className="text-[10px] uppercase font-bold text-gray-400 border border-gray-700 px-2 py-1 rounded bg-black/30">
+            GPU 76%
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Live Notifications Toasts */}
+      <div className="absolute bottom-24 right-4 z-50 flex flex-col gap-2">
+        <AnimatePresence>
+          {notifications.map((note, i) => (
+            <motion.div 
+              key={i}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 50 }}
+              className="bg-crowd_panel backdrop-blur border border-gray-700 p-3 rounded shadow-lg flex items-center gap-3 text-xs"
+            >
+              <Bell className="w-4 h-4 text-crowd_green" />
+              {note}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
     </div>
   );
 };

@@ -15,23 +15,24 @@ export interface DeviceTelemetry {
 // expensive React tree re-renders for every single point update.
 interface TelemetryStore {
   devices: Record<string, DeviceTelemetry>;
-  updateDevice: (device: DeviceTelemetry) => void;
+  updateBatch: (batch: DeviceTelemetry[]) => void;
   getPoints: () => DeviceTelemetry[];
 }
 
 export const useTelemetryStore = create<TelemetryStore>((set, get) => ({
   devices: {},
-  updateDevice: (device) => set((state) => ({
-    devices: {
-      ...state.devices,
-      [device.deviceId]: device
+  updateBatch: (batch) => set((state) => {
+    const newDevices = { ...state.devices };
+    for (const device of batch) {
+      newDevices[device.deviceId] = device;
     }
-  })),
+    return { devices: newDevices };
+  }),
   getPoints: () => Object.values(get().devices)
 }));
 
 export const useTelemetryStream = () => {
-  const updateDevice = useTelemetryStore(state => state.updateDevice);
+  const updateBatch = useTelemetryStore(state => state.updateBatch);
 
   useEffect(() => {
     // In production, this points to the Envoy API Gateway
@@ -44,14 +45,12 @@ export const useTelemetryStream = () => {
     });
 
     socket.on('telemetry_batch', (batch: DeviceTelemetry[]) => {
-      // Process massive batches efficiently
-      for (const device of batch) {
-        updateDevice(device);
-      }
+      // Process massive batches efficiently via single state update
+      updateBatch(batch);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [updateDevice]);
+  }, [updateBatch]);
 };
