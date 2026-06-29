@@ -4,6 +4,7 @@ import DigitalTwin from './components/DigitalTwin';
 import { Search, User, Bell, Activity, AlertTriangle, Play, ChevronRight, Zap, Camera, Crosshair, Send, Layers, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { telemetrySocket } from './hooks/useTelemetryStream';
 
 const mockChartData = [
   { time: '10:00', density: 12000 },
@@ -23,6 +24,9 @@ const App: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: string, content: string}[]>([]);
   const [notifications, setNotifications] = useState<string[]>(['Redis Recovered', 'New Anomaly Detected']);
+  
+  // Global Map Center State
+  const [mapCenter, setMapCenter] = useState({ latitude: 28.6139, longitude: 77.2090 }); // Default New Delhi
 
   // Fake slight variations for the KPIs
   useEffect(() => {
@@ -42,11 +46,39 @@ const App: React.FC = () => {
     setChatInput('');
   };
 
+  const handleSearch = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      const query = (e.target as HTMLInputElement).value;
+      if (!query.trim()) return;
+      
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          
+          setMapCenter({ latitude: lat, longitude: lon });
+          
+          // Send to backend to scatter devices around new location
+          telemetrySocket.emit('set_location', { lat: lat, lng: lon });
+          
+          setNotifications(prev => [...prev, `Map centered to ${data[0].display_name.split(',')[0]}`]);
+        } else {
+          alert('Location not found');
+        }
+      } catch (err) {
+        console.error('Search error', err);
+      }
+    }
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden bg-crowd_bg text-white font-sans">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0">
-        {viewMode === 'map' ? <MapLayer /> : <DigitalTwin />}
+        {viewMode === 'map' ? <MapLayer center={mapCenter} /> : <DigitalTwin />}
       </div>
 
       {/* Top Navbar */}
@@ -84,8 +116,9 @@ const App: React.FC = () => {
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
             <input 
               type="text" 
-              placeholder="Search Zones..." 
-              className="bg-black/40 border border-gray-700 rounded-full pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:border-crowd_green transition-colors w-64"
+              placeholder="Search Global Location... (Enter)" 
+              onKeyDown={handleSearch}
+              className="bg-black/40 border border-gray-700 rounded-full pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:border-crowd_green transition-colors w-72"
             />
           </div>
 

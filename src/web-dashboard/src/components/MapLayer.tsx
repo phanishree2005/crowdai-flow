@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Map from 'react-map-gl';
 import maplibregl from 'maplibre-gl';
 import DeckGL from '@deck.gl/react/typed';
@@ -6,31 +6,11 @@ import { GeoJsonLayer, PathLayer } from '@deck.gl/layers/typed';
 import { HexagonLayer, HeatmapLayer } from '@deck.gl/aggregation-layers/typed';
 import { useTelemetryStore, useTelemetryStream } from '../hooks/useTelemetryStream';
 
-// Initial viewport
-const INITIAL_VIEW_STATE = {
-  longitude: 77.2090, // New Delhi, India
-  latitude: 28.6139,
-  zoom: 11,
-  pitch: 45,
-  bearing: 0
-};
+interface MapLayerProps {
+  center: { latitude: number; longitude: number };
+}
 
-// Mock administrative zones
-const MOCK_ZONES = {
-  type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      properties: { name: 'Zone Alpha', status: 'critical' },
-      geometry: {
-        type: 'Polygon',
-        coordinates: [[[77.10, 28.70], [77.30, 28.70], [77.30, 28.50], [77.10, 28.50], [77.10, 28.70]]]
-      }
-    }
-  ]
-};
-
-const MapLayer: React.FC = () => {
+const MapLayer: React.FC<MapLayerProps> = ({ center }) => {
   // Initialize WebSocket stream
   useTelemetryStream();
 
@@ -40,17 +20,63 @@ const MapLayer: React.FC = () => {
   // Route Recommendation State
   const [destination, setDestination] = useState<[number, number] | null>(null);
 
+  // Dynamic ViewState to smoothly animate when center prop changes
+  const [viewState, setViewState] = useState({
+    longitude: center.longitude,
+    latitude: center.latitude,
+    zoom: 11,
+    pitch: 45,
+    bearing: 0,
+    transitionDuration: 1000
+  });
+
+  // Re-center map when search occurs
+  useEffect(() => {
+    setViewState(prev => ({
+      ...prev,
+      longitude: center.longitude,
+      latitude: center.latitude,
+      transitionDuration: 1000
+    }));
+  }, [center]);
+
+  // Construct dynamic zones relative to the center
+  const dynamicZones = useMemo(() => {
+    const lat = center.latitude;
+    const lng = center.longitude;
+    // Generate a mock critical zone box ~2km around the center
+    return {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          properties: { name: 'Zone Alpha', status: 'critical' },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[
+              [lng - 0.02, lat + 0.02], 
+              [lng + 0.02, lat + 0.02], 
+              [lng + 0.02, lat - 0.02], 
+              [lng - 0.02, lat - 0.02], 
+              [lng - 0.02, lat + 0.02]
+            ]]
+          }
+        }
+      ]
+    };
+  }, [center]);
+
   // Construct Deck.gl Layers
   const layers = useMemo(() => {
     const baseLayers = [
       new GeoJsonLayer({
         id: 'zones-layer',
-        data: MOCK_ZONES,
+        data: dynamicZones as any,
         pickable: true,
         stroked: true,
         filled: true,
         extruded: false,
-        getFillColor: f => f.properties.status === 'critical' ? [220, 38, 38, 50] : [74, 222, 128, 50],
+        getFillColor: (f: any) => f.properties.status === 'critical' ? [220, 38, 38, 50] : [74, 222, 128, 50],
         getLineColor: [255, 255, 255, 100],
         lineWidthMinPixels: 2
       }),
@@ -86,25 +112,26 @@ const MapLayer: React.FC = () => {
         new PathLayer({
           id: 'route-layer',
           data: [{
-            path: [[INITIAL_VIEW_STATE.longitude, INITIAL_VIEW_STATE.latitude], destination],
+            path: [[center.longitude, center.latitude], destination],
             color: [74, 222, 128] // Green route
           }],
           pickable: true,
           widthScale: 20,
           widthMinPixels: 4,
-          getPath: d => d.path,
-          getColor: d => d.color,
-          getWidth: d => 5
+          getPath: (d: any) => d.path,
+          getColor: (d: any) => d.color,
+          getWidth: (d: any) => 5
         })
       );
     }
 
     return baseLayers;
-  }, [points, destination]);
+  }, [points, destination, dynamicZones, center]);
 
   return (
     <DeckGL
-      initialViewState={INITIAL_VIEW_STATE}
+      viewState={viewState}
+      onViewStateChange={({ viewState: newViewState }) => setViewState(newViewState as any)}
       controller={true}
       layers={layers}
       style={{ width: '100%', height: '100%' }}

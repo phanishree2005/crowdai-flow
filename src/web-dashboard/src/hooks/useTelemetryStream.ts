@@ -11,6 +11,12 @@ export interface DeviceTelemetry {
   batteryLevel: number;
 }
 
+// Global socket instance
+export const telemetrySocket = io('ws://localhost:8080/stream', {
+  transports: ['websocket'],
+  autoConnect: false // We will connect manually
+});
+
 // Zustand store to hold massive arrays of points without triggering
 // expensive React tree re-renders for every single point update.
 interface TelemetryStore {
@@ -35,22 +41,19 @@ export const useTelemetryStream = () => {
   const updateBatch = useTelemetryStore(state => state.updateBatch);
 
   useEffect(() => {
-    // In production, this points to the Envoy API Gateway
-    const socket = io('ws://localhost:8080/stream', {
-      transports: ['websocket']
-    });
+    telemetrySocket.connect();
 
-    socket.on('connect', () => {
+    telemetrySocket.on('connect', () => {
       console.log('Connected to CrowdFlow Telemetry Stream');
     });
 
-    socket.on('telemetry_batch', (batch: DeviceTelemetry[]) => {
+    telemetrySocket.on('telemetry_batch', (batch: DeviceTelemetry[]) => {
       // Process massive batches efficiently via single state update
       updateBatch(batch);
     });
 
     return () => {
-      socket.disconnect();
+      telemetrySocket.disconnect();
     };
   }, [updateBatch]);
 };

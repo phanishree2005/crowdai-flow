@@ -16,19 +16,24 @@ const io = new Server(server, {
 
 const PORT = 8080;
 const NUM_DEVICES = 5000;
-const INDIA_CENTER = { lat: 28.6139, lng: 77.2090 };
+let currentCenter = { lat: 28.6139, lng: 77.2090 }; // Default to New Delhi initially
 
 // Generate initial devices
-const devices = [];
-for (let i = 0; i < NUM_DEVICES; i++) {
-  devices.push({
-    deviceId: `device-${i}`,
-    latitude: INDIA_CENTER.lat + (Math.random() - 0.5) * 0.1, // Scatter around India
-    longitude: INDIA_CENTER.lng + (Math.random() - 0.5) * 0.1,
-    speed: Math.random() * 60, // 0 to 60 mph
-    batteryLevel: 100
-  });
+let devices = [];
+function scatterDevices(center) {
+  devices = [];
+  for (let i = 0; i < NUM_DEVICES; i++) {
+    devices.push({
+      deviceId: `device-${i}`,
+      latitude: center.lat + (Math.random() - 0.5) * 0.1,
+      longitude: center.lng + (Math.random() - 0.5) * 0.1,
+      speed: Math.random() * 60, // 0 to 60 mph
+      batteryLevel: 100
+    });
+  }
 }
+
+scatterDevices(currentCenter);
 
 // Set up /stream namespace
 const streamNamespace = io.of('/stream');
@@ -36,6 +41,14 @@ const streamNamespace = io.of('/stream');
 streamNamespace.on('connection', (socket) => {
   console.log(`[+] Client connected to stream: ${socket.id}`);
   
+  socket.on('set_location', (data) => {
+    console.log(`[!] Relocating telemetry to: ${data.lat}, ${data.lng}`);
+    if (data.lat && data.lng) {
+      currentCenter = { lat: parseFloat(data.lat), lng: parseFloat(data.lng) };
+      scatterDevices(currentCenter);
+    }
+  });
+
   socket.on('disconnect', () => {
     console.log(`[-] Client disconnected: ${socket.id}`);
   });
