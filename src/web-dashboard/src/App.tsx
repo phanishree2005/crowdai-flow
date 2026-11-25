@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import MapLayer from './components/MapLayer';
 import DigitalTwin from './components/DigitalTwin';
-import { Search, User, Bell, Activity, AlertTriangle, Play, ChevronRight, Zap, Camera, Crosshair, Send, Layers, Shield } from 'lucide-react';
+import { Search, Bell, Activity, AlertTriangle, Play, Zap, Camera, Crosshair, Send, Layers, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { telemetrySocket } from './hooks/useTelemetryStream';
+import { telemetrySocket, useTelemetryStore } from './hooks/useTelemetryStream';
 
 const mockChartData = [
   { time: '10:00', density: 12000 },
@@ -17,33 +17,58 @@ const mockChartData = [
 ];
 
 const App: React.FC = () => {
-  const [activeDevices, setActiveDevices] = useState(24581);
-  const [currentCrowd, setCurrentCrowd] = useState(18924);
+  const deviceCount = useTelemetryStore(state => Object.keys(state.devices).length);
+  
+  // Use actual telemetry data for statistics, fallback to loading/0 state if empty
+  const activeDevices = deviceCount;
+  const currentCrowd = Math.floor(deviceCount * 1.8); // Estimated crowd multiplier based on devices
+  const criticalZones = 4; // Matching the 4 dynamic accident hotspots
+  const healthyZones = Math.max(0, Math.floor(deviceCount / 50) - criticalZones);
+
   const [viewMode, setViewMode] = useState<'map' | 'twin'>('map');
   const [timePrediction, setTimePrediction] = useState('Live');
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<{role: string, content: string}[]>([]);
   const [notifications, setNotifications] = useState<string[]>(['Redis Recovered', 'New Anomaly Detected']);
-  
+
   // Global Map Center State
   const [mapCenter, setMapCenter] = useState({ latitude: 28.6139, longitude: 77.2090 }); // Default New Delhi
 
-  // Fake slight variations for the KPIs
+  // Update chart data dynamically over time based on active crowd
+  const [chartData, setChartData] = useState(mockChartData);
   useEffect(() => {
+    if (currentCrowd === 0) return;
     const interval = setInterval(() => {
-      setActiveDevices(prev => prev + Math.floor(Math.random() * 5) - 2);
-      setCurrentCrowd(prev => prev + Math.floor(Math.random() * 10) - 5);
-    }, 2000);
+      setChartData(prev => {
+        const newData = [...prev.slice(1)];
+        const now = new Date();
+        newData.push({
+          time: `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`,
+          density: currentCrowd + Math.floor(Math.random() * 200 - 100)
+        });
+        return newData;
+      });
+    }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentCrowd]);
 
-  const handleAIChat = () => {
+  const handleAIChat = async () => {
     if (!chatInput.trim()) return;
-    setChatHistory([...chatHistory, { role: 'user', content: chatInput }]);
-    setTimeout(() => {
-      setChatHistory(prev => [...prev, { role: 'ai', content: 'Analyzing multi-modal streams... Zone Alpha is congested due to an unexpected bottleneck at Gate 3. Deploying security team is advised.' }]);
-    }, 1000);
+    const userMessage = chatInput;
+    setChatHistory([...chatHistory, { role: 'user', content: userMessage }]);
     setChatInput('');
+    
+    try {
+      const response = await fetch('http://localhost:8080/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMessage })
+      });
+      const data = await response.json();
+      setChatHistory(prev => [...prev, { role: 'ai', content: data.response }]);
+    } catch (err) {
+      setChatHistory(prev => [...prev, { role: 'ai', content: 'AI Service is currently offline.' }]);
+    }
   };
 
   const handleSearch = async (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -159,11 +184,11 @@ const App: React.FC = () => {
         <div className="grid grid-cols-2 gap-3 mt-2">
           <div className="bg-black/30 p-3 rounded border border-gray-800">
             <div className="text-crowd_green text-xs mb-1">Healthy Zones</div>
-            <div className="text-lg font-mono">112</div>
+            <div className="text-lg font-mono">{healthyZones}</div>
           </div>
           <div className="bg-black/30 p-3 rounded border border-gray-800">
             <div className="text-crowd_red text-xs mb-1">Critical Zones</div>
-            <div className="text-lg font-mono">6</div>
+            <div className="text-lg font-mono">{criticalZones}</div>
           </div>
         </div>
 
@@ -172,7 +197,7 @@ const App: React.FC = () => {
           <h2 className="text-xs uppercase text-gray-400 font-bold tracking-widest mb-4">Crowd Density Trend</h2>
           <div className="h-32 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={mockChartData}>
+              <AreaChart data={chartData}>
                 <defs>
                   <linearGradient id="colorDensity" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#4ade80" stopOpacity={0.8}/>
@@ -233,22 +258,34 @@ const App: React.FC = () => {
         </div>
 
         {/* Phase 3: Camera YOLO Widget */}
-        <div className="bg-black/40 border border-gray-800 p-3 rounded shrink-0">
-          <div className="flex items-center justify-between mb-2">
+        <div className="bg-black/40 border border-gray-800 p-3 rounded shrink-0 relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2 relative z-10">
             <h3 className="text-xs font-bold text-gray-300 flex items-center gap-2"><Camera className="w-4 h-4" /> Camera 21 (Gate A)</h3>
-            <span className="text-[10px] text-crowd_green flex items-center gap-1"><Crosshair className="w-3 h-3"/> YOLOv8 Live</span>
+            <span className="text-[10px] text-crowd_green flex items-center gap-1 animate-pulse"><Crosshair className="w-3 h-3"/> YOLOv8 Live</span>
           </div>
           <div className="relative w-full h-24 bg-gray-900 rounded overflow-hidden border border-gray-700 flex items-center justify-center">
             {/* Mock Camera View */}
-            <div className="absolute inset-0 opacity-30 bg-black"></div>
-            <div className="text-[10px] text-gray-500 font-mono tracking-widest border border-gray-500 px-2 py-1 rounded">LIVE FEED OFFLINE</div>
-            {/* Mock Bounding Boxes (if image was loaded) */}
-            <div className="absolute top-4 left-10 w-12 h-16 border border-crowd_green rounded-sm"></div>
-            <div className="absolute top-2 left-32 w-10 h-14 border border-crowd_green rounded-sm"></div>
+            <div className="absolute inset-0 opacity-40 bg-[url('https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c?q=80&w=600&auto=format&fit=crop')] bg-cover bg-center"></div>
+            
+            {/* Mock Animated Bounding Boxes */}
+            <motion.div 
+              animate={{ x: [0, 40, 80, 40, 0], y: [0, -10, 0, 10, 0] }} 
+              transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+              className="absolute top-4 left-10 w-12 h-16 border-2 border-crowd_green rounded-sm shadow-[0_0_8px_rgba(74,222,128,0.5)]">
+                <span className="absolute -top-3 left-0 text-[8px] bg-crowd_green text-black px-1 font-bold">person 0.94</span>
+            </motion.div>
+
+            <motion.div 
+              animate={{ x: [0, -30, -60, -30, 0], y: [0, 5, 10, 5, 0] }} 
+              transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+              className="absolute top-8 right-10 w-10 h-14 border-2 border-crowd_green rounded-sm shadow-[0_0_8px_rgba(74,222,128,0.5)]">
+                <span className="absolute -top-3 left-0 text-[8px] bg-crowd_green text-black px-1 font-bold">person 0.89</span>
+            </motion.div>
+            
           </div>
-          <div className="flex justify-between mt-2 text-[10px] text-gray-400">
-            <span>Occupancy: 84</span>
-            <span>Avg Confidence: 94%</span>
+          <div className="flex justify-between mt-2 text-[10px] text-gray-400 relative z-10">
+            <span>Occupancy: {Math.floor(activeDevices / 500)} detected</span>
+            <span>Avg Confidence: 92%</span>
           </div>
         </div>
 
@@ -345,15 +382,15 @@ const App: React.FC = () => {
       </motion.div>
 
       {/* Live Notifications Toasts */}
-      <div className="absolute bottom-24 right-4 z-50 flex flex-col gap-2">
+      <div className="absolute top-24 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none">
         <AnimatePresence>
           {notifications.map((note, i) => (
             <motion.div 
               key={i}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 50 }}
-              className="bg-crowd_panel backdrop-blur border border-gray-700 p-3 rounded shadow-lg flex items-center gap-3 text-xs"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-crowd_panel backdrop-blur border border-gray-700 p-3 rounded shadow-lg flex items-center gap-3 text-xs pointer-events-auto min-w-[250px]"
             >
               <Bell className="w-4 h-4 text-crowd_green" />
               {note}

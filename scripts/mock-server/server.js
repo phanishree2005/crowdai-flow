@@ -5,6 +5,27 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
+app.use(express.json());
+
+app.post('/api/chat', (req, res) => {
+  const { message } = req.body;
+  const lowercaseMsg = message.toLowerCase();
+  
+  let response = "I'm analyzing the telemetry data streams, but I need more specific parameters to execute that request.";
+  
+  if (lowercaseMsg.includes("rerouting") || lowercaseMsg.includes("zone alpha")) {
+    response = "Analyzing multi-modal streams... Zone Alpha is currently at 98% capacity. I recommend dispatching traffic through the North Corridor and opening Gate 4 to alleviate the bottleneck. Evacuation protocol stands ready.";
+  } else if (lowercaseMsg.includes("predict") || lowercaseMsg.includes("congestion")) {
+    response = "Running predictive models for T+15m... Forecast shows severe congestion building at the main intersection due to the current influx rate. Recommending immediate deployment of traffic control units.";
+  } else if (lowercaseMsg.includes("status") || lowercaseMsg.includes("health")) {
+    response = `System Health is Optimal. Tracking ${devices.length} active devices globally. Kafka and Redis pipelines are nominal with 14ms average latency.`;
+  }
+
+  // Simulate LLM processing delay
+  setTimeout(() => {
+    res.json({ response });
+  }, 1200);
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {

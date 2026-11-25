@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import Map from 'react-map-gl';
+import Map from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import DeckGL from '@deck.gl/react/typed';
-import { GeoJsonLayer, PathLayer } from '@deck.gl/layers/typed';
+import { GeoJsonLayer, PathLayer, ScatterplotLayer } from '@deck.gl/layers/typed';
 import { HexagonLayer, HeatmapLayer } from '@deck.gl/aggregation-layers/typed';
 import { useTelemetryStore, useTelemetryStream } from '../hooks/useTelemetryStream';
 
@@ -66,9 +66,19 @@ const MapLayer: React.FC<MapLayerProps> = ({ center }) => {
     };
   }, [center]);
 
+  // Generate stable accident hotspots relative to the center
+  const accidentZones = useMemo(() => {
+    return [
+      { longitude: center.longitude + 0.015, latitude: center.latitude + 0.012, severity: 'critical', desc: 'Multi-vehicle collision' },
+      { longitude: center.longitude - 0.01, latitude: center.latitude - 0.02, severity: 'high', desc: 'Roadwork & High Accident Area' },
+      { longitude: center.longitude - 0.02, latitude: center.latitude + 0.005, severity: 'critical', desc: 'Severe congestion accident' },
+      { longitude: center.longitude + 0.008, latitude: center.latitude - 0.015, severity: 'high', desc: 'Intersection accident' }
+    ];
+  }, [center]);
+
   // Construct Deck.gl Layers
   const layers = useMemo(() => {
-    const baseLayers = [
+    const baseLayers: any[] = [
       new GeoJsonLayer({
         id: 'zones-layer',
         data: dynamicZones as any,
@@ -83,8 +93,8 @@ const MapLayer: React.FC<MapLayerProps> = ({ center }) => {
       new HeatmapLayer({
         id: 'heatmapLayer',
         data: points,
-        getPosition: d => [d.longitude, d.latitude],
-        getWeight: d => d.speed,
+        getPosition: (d: any) => [d.longitude, d.latitude],
+        getWeight: (d: any) => d.speed,
         radiusPixels: 40,
         intensity: 1,
         threshold: 0.1,
@@ -96,7 +106,7 @@ const MapLayer: React.FC<MapLayerProps> = ({ center }) => {
         extruded: true,
         radius: 200,
         elevationScale: 10,
-        getPosition: d => [d.longitude, d.latitude],
+        getPosition: (d: any) => [d.longitude, d.latitude],
         colorRange: [
           [74, 222, 128],  // green
           [250, 204, 21],  // yellow
@@ -104,6 +114,22 @@ const MapLayer: React.FC<MapLayerProps> = ({ center }) => {
           [248, 113, 113], // red
           [220, 38, 38]    // dark red
         ]
+      }),
+      new ScatterplotLayer({
+        id: 'accident-zones',
+        data: accidentZones,
+        pickable: true,
+        opacity: 0.8,
+        stroked: true,
+        filled: true,
+        radiusScale: 50,
+        radiusMinPixels: 15,
+        radiusMaxPixels: 40,
+        lineWidthMinPixels: 2,
+        getPosition: (d: any) => [d.longitude, d.latitude],
+        getFillColor: (d: any) => d.severity === 'critical' ? [239, 68, 68, 200] : [249, 115, 22, 200], // Red / Orange
+        getLineColor: [255, 255, 255, 255],
+        getRadius: () => 5,
       })
     ];
 
@@ -120,7 +146,7 @@ const MapLayer: React.FC<MapLayerProps> = ({ center }) => {
           widthMinPixels: 4,
           getPath: (d: any) => d.path,
           getColor: (d: any) => d.color,
-          getWidth: (d: any) => 5
+          getWidth: () => 5
         })
       );
     }
@@ -136,6 +162,10 @@ const MapLayer: React.FC<MapLayerProps> = ({ center }) => {
       layers={layers}
       style={{ width: '100%', height: '100%' }}
       onClick={(info) => {
+        if (info.layer && info.layer.id === 'accident-zones') {
+          alert(`CRITICAL ALERT: ${info.object.desc}\nSeverity: ${info.object.severity.toUpperCase()}\nDispatching emergency units...`);
+          return;
+        }
         if (info.coordinate) {
           setDestination([info.coordinate[0], info.coordinate[1]]);
           // Simulate popup trigger for ETA
@@ -144,9 +174,8 @@ const MapLayer: React.FC<MapLayerProps> = ({ center }) => {
       }}
     >
       <Map
-        mapLib={maplibregl}
+        mapLib={maplibregl as any}
         mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-        preventStyleDiffing={true}
       />
     </DeckGL>
   );
