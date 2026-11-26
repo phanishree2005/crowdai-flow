@@ -61,6 +61,8 @@ const streamNamespace = io.of('/stream');
 
 streamNamespace.on('connection', (socket) => {
   console.log(`[+] Client connected to stream: ${socket.id}`);
+  // Immediately send current batch upon connection
+  socket.emit('telemetry_batch', devices);
   
   socket.on('set_location', (data) => {
     console.log(`[!] Relocating telemetry to: ${data.lat}, ${data.lng}`);

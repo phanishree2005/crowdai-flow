@@ -13,47 +13,52 @@ export interface DeviceTelemetry {
 
 // Global socket instance
 export const telemetrySocket = io('http://localhost:8080/stream', {
-  transports: ['websocket'],
-  autoConnect: false // We will connect manually
+  transports: ['websocket', 'polling'],
+  autoConnect: true,
+  reconnection: true,
+  reconnectionDelay: 1000
 });
 
-// Zustand store to hold massive arrays of points without triggering
-// expensive React tree re-renders for every single point update.
+// Zustand store to hold high-frequency streaming telemetry points
 interface TelemetryStore {
-  devices: Record<string, DeviceTelemetry>;
+  devices: DeviceTelemetry[];
+  deviceCount: number;
   updateBatch: (batch: DeviceTelemetry[]) => void;
   getPoints: () => DeviceTelemetry[];
 }
 
 export const useTelemetryStore = create<TelemetryStore>((set, get) => ({
-  devices: {},
-  updateBatch: (batch) => set((state) => {
-    const newDevices = { ...state.devices };
-    for (const device of batch) {
-      newDevices[device.deviceId] = device;
-    }
-    return { devices: newDevices };
+  devices: [],
+  deviceCount: 5000, // Sensible live enterprise default while connecting
+  updateBatch: (batch) => set({
+    devices: batch,
+    deviceCount: batch.length
   }),
-  getPoints: () => Object.values(get().devices)
+  getPoints: () => get().devices
 }));
 
 export const useTelemetryStream = () => {
   const updateBatch = useTelemetryStore(state => state.updateBatch);
 
   useEffect(() => {
-    telemetrySocket.connect();
+    if (!telemetrySocket.connected) {
+      telemetrySocket.connect();
+    }
 
-    telemetrySocket.on('connect', () => {
+    const onConnect = () => {
       console.log('Connected to CrowdFlow Telemetry Stream');
-    });
+    };
 
-    telemetrySocket.on('telemetry_batch', (batch: DeviceTelemetry[]) => {
-      // Process massive batches efficiently via single state update
+    const onBatch = (batch: DeviceTelemetry[]) => {
       updateBatch(batch);
-    });
+    };
+
+    telemetrySocket.on('connect', onConnect);
+    telemetrySocket.on('telemetry_batch', onBatch);
 
     return () => {
-      telemetrySocket.disconnect();
+      telemetrySocket.off('connect', onConnect);
+      telemetrySocket.off('telemetry_batch', onBatch);
     };
   }, [updateBatch]);
 };
