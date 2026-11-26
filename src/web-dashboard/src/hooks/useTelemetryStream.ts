@@ -12,7 +12,7 @@ export interface DeviceTelemetry {
 }
 
 // Global socket instance
-export const telemetrySocket = io('ws://localhost:8080/stream', {
+export const telemetrySocket = io('http://localhost:8080/stream', {
   transports: ['websocket'],
   autoConnect: false // We will connect manually
 });

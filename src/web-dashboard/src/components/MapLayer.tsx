@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import Map from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
 import DeckGL from '@deck.gl/react';
