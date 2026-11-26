@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
 import maplibregl from 'maplibre-gl';
-import DeckGL from '@deck.gl/react/typed';
-import { GeoJsonLayer, PathLayer, ScatterplotLayer } from '@deck.gl/layers/typed';
-import { HexagonLayer, HeatmapLayer } from '@deck.gl/aggregation-layers/typed';
+import DeckGL from '@deck.gl/react';
+import { GeoJsonLayer, PathLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { HexagonLayer, HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { useTelemetryStore, useTelemetryStream } from '../hooks/useTelemetryStream';
 
 interface MapLayerProps {
