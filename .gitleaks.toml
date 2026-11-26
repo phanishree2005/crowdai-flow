@@ -1,0 +1,7 @@
+# Gitleaks Configuration
+[allowlist]
+description = "Global allowlist for build artifacts and framework manifests"
+paths = [
+  '''(\.next|node_modules|target|dist|build)/''',
+  '''server-reference-manifest\.json'''
+]

@@ -1,0 +1,3 @@
+# Gitleaks ignore false positives
+# Next.js build manifest false-positive generic-api-key
+eaa89d998de5b79a6473a0abdfe12c91a31c7d01:src/ops-dashboard/.next/server/server-reference-manifest.json:generic-api-key:4
